@@ -338,17 +338,21 @@
             });
         }
 
+        // **FIX:** Correctly initialize the chat history to be valid for the API.
         window.addEventListener('load', () => {
             const initialMessages = [
                 "¡Bienvenidos a Montaner Viajes!",
                 "Soy María, su compañera de viajes. ¡Qué alegría que empecemos a planificar juntos! Para que la charla sea más personal, ¿cómo se llaman?"
             ];
             
+            // The API requires the history to start with a 'user' role.
+            // We create a valid history that reflects the initial state of the conversation.
             chatHistory.push(
-                { role: "model", parts: [{ text: initialMessages[0] }] },
-                { role: "model", parts: [{ text: initialMessages[1] }] }
+                { role: "user", parts: [{ text: "START_SESSION" }] }, // A placeholder to make the sequence valid
+                { role: "model", parts: [{ text: initialMessages.join('\n\n') }] } // The model's greeting
             );
             
+            // Display the initial messages in the UI for the user
             typeAiMessage(initialMessages[0]).then(() => {
                 typeAiMessage(initialMessages[1]);
             });
