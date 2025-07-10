@@ -49,7 +49,6 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Cursor parpadeante para el efecto de tipeo */
         .typing-cursor::after {
             content: '▋';
             animation: blink 1s step-end infinite;
@@ -109,12 +108,11 @@
         const formspreeUrl = 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE';
 
         let chatHistory = [];
-        let finalItineraryText = "";
 
         const systemPrompt = `
             Tu rol: Eres María, una asesora de viajes experta de la agencia "Montaner Viajes". Tu estilo es profesional, cercano y amigable. Tu misión es guiar al usuario en una charla relajada para co-crear un viaje.
             **REGLAS DE ORO (INQUEBRANTABLES):**
-            - **Auto-corrección:** Antes de responder, revisa el historial del chat. NUNCA repitas una pregunta que ya hiciste. NUNCA te presentes de nuevo.
+            - **Auto-corrección:** Antes de responder, revisa el historial del chat. NUNCA repitas una pregunta que ya hiciste.
             - **Oraciones Cortas:** Comunica una idea por mensaje.
             - **Interactúa:** Después de cada idea, pregunta "¿Qué te parece?" o similar.
             - **Espera Respuestas:** Si terminas con una pregunta, detente y espera la respuesta del usuario.
@@ -122,12 +120,9 @@
             - **Separador:** Usa "[---]" para enviar varios mensajes cortos en un solo turno.
             **FLUJO DE CONVERSACIÓN OBLIGATORIO POR FASES:**
             No puedes pasar a la siguiente fase hasta no haber completado la actual.
-            **FASE 1: PRESENTACIÓN**
-            1.  **Si el chat está vacío:** Tu primer mensaje DEBE SER: "¡Hola! Soy María, de Montaner Viajes. ¡Qué alegría que empecemos a planificar un viaje juntos! Contame, ¿qué tenés en mente?".
-            2.  **Si ya te presentaste y no sabes el nombre:** DEBES preguntar por el nombre. Ejemplo: "¡Suena genial! Para que charlemos mejor, ¿cómo te llamas?".
-            3.  **PROHIBIDO AVANZAR:** NO pases a la Fase 2 hasta que sepas el nombre del usuario.
-            **FASE 2: PERFIL DEL VIAJERO**
-            Una vez que sabes el nombre, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
+            **FASE 1: PERFIL DEL VIAJERO (Tu objetivo es completar esta checklist)**
+            El usuario ya ha recibido tu saludo. Tu primer objetivo es conocer su nombre. Luego, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
+            - [ ] Nombre(s) del/los viajero(s).
             - [ ] Estilo de Viaje: ¿Típico o alternativo?
             - [ ] Grupo de Viaje: ¿Solo, pareja, amigos, familia?
             - [ ] Edades del Grupo.
@@ -135,12 +130,12 @@
             - [ ] Duración y Época.
             - [ ] Documentación (SOLO si es internacional): Pasaporte y Visa (si aplica).
             - [ ] Contacto: Email y celular.
-            **FASE 3: PLANIFICACIÓN DEL ITINERARIO**
-            Solo cuando tengas un perfil claro, empieza a planificar:
+            **FASE 2: PLANIFICACIÓN DEL ITINERARIO**
+            Solo cuando tengas un perfil claro del viajero, empieza a planificar:
             - **Sugerencias Interactivas:** Nombra opciones (A, B, C) y pregunta de cuál quieren saber más.
             - **Manejo de Presupuesto:** Deriva los precios a tu compañera.
             - **Manejo de Paquetes Armados:** Si insisten, deriva el contacto.
-            **FASE 4: CIERRE**
+            **FASE 3: CIERRE**
             Cuando el plan esté completo, tu ÚNICO mensaje en este turno debe ser: "Perfecto, [nombre del usuario]. Con toda esta información ya podemos armar el borrador final.[---]Para que mi compañera reciba el plan y pueda preparar el presupuesto, por favor, presiona el botón azul que dice 'Generar Borrador'.";
         `;
         
@@ -184,24 +179,18 @@
             });
         }
         
-        async function handleSendMessage(isInitial = false) {
+        async function handleSendMessage() {
             const message = userInput.value.trim();
-            if (!message && !isInitial) return;
+            if (!message) return;
 
-            let currentUserMessage;
-            if (isInitial) {
-                currentUserMessage = { role: "user", parts: [{ text: "Hola, quiero empezar a planificar un viaje." }] };
-            } else {
-                addUserMessage(message);
-                userInput.value = '';
-                currentUserMessage = { role: "user", parts: [{ text: message }] };
-            }
-            
-            chatHistory.push(currentUserMessage);
+            addUserMessage(message);
+            userInput.value = '';
             
             loader.classList.remove('hidden');
             sendBtn.disabled = true;
             userInput.disabled = true;
+
+            chatHistory.push({ role: "user", parts: [{ text: message }] });
 
             try {
                 const apiKey = "";
@@ -233,13 +222,11 @@
 
                 const result = await response.json();
                 let aiResponse = "Lo siento, no pude procesar tu solicitud.";
-
                 if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
                     aiResponse = result.candidates[0].content.parts[0].text;
                 }
                 
                 loader.classList.add('hidden');
-                
                 chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
 
                 const messageParts = aiResponse.split('[---]');
@@ -263,7 +250,7 @@
             } catch (error) {
                 console.error("Error al contactar la API de Gemini:", error);
                 loader.classList.add('hidden');
-                await typeAiMessage('Hubo un error de conexión con el asistente. Por favor, revisa la consola para más detalles (F12).');
+                await typeAiMessage('Hubo un error al conectar con el asistente. Por favor, revisa la consola.');
             } finally {
                 sendBtn.disabled = false;
                 userInput.disabled = false;
@@ -281,7 +268,7 @@
             try {
                 const summarizerPrompt = `
                     Basado en el siguiente historial de chat, crea un itinerario final conciso para uso interno de la agencia.
-                    El itinerario DEBE empezar con la sección '## Resumen para Presupuesto' con todos los datos del cliente que se hayan recopilado (Nombres, Email, Celular, Duración, Época, Pasaportes, Visa, etc.). Si un dato no se recopiló, indícalo como 'A confirmar'.
+                    El itinerario DEBE empezar con la sección '## Resumen para Presupuesto' con todos los datos del cliente que se hayan recopilado (Nombres, Email, Celular, Duración, Época, Pasaportes, Visa, Estilo de Viaje, Ritmo, etc.). Si un dato no se recopiló, indícalo como 'A confirmar'.
                     Luego, añade la sección '## Itinerario Propuesto' con los puntos clave del viaje que se acordaron.
                     NO agregues ninguna recomendación nueva o información que no se haya discutido explícitamente. Sé conciso y directo.
                     Historial del chat: ${JSON.stringify(chatHistory)}
@@ -300,20 +287,18 @@
                     summaryText = result.candidates[0].content.parts[0].text;
                 }
                 
-                finalItineraryText = summaryText;
-
                 if (formspreeUrl && formspreeUrl !== 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE') {
                     await fetch(formspreeUrl, {
                         method: 'POST',
                         body: JSON.stringify({ 
                             asunto: `Nuevo Lead de Viaje`,
-                            mensaje: finalItineraryText 
+                            mensaje: summaryText 
                         }),
                         headers: { 'Content-Type': 'application/json' }
                     });
                 }
 
-                exportToPDF(finalItineraryText);
+                exportToPDF(summaryText);
 
                 await typeAiMessage("¡Listo! La información ya fue enviada. Mi compañera se pondrá en contacto contigo pronto. ¡Gracias por confiar en nosotros!");
                 generateBtn.textContent = 'Confirmado';
@@ -332,13 +317,13 @@
             
             const container = document.createElement('div');
             container.innerHTML = marked.parse(text);
-            container.style.width = '180mm'; 
-            container.style.visibility = 'hidden'; 
+            container.style.width = '180mm';
+            container.style.visibility = 'hidden';
             document.body.appendChild(container);
 
             doc.html(container, {
                 callback: function (doc) {
-                    document.body.removeChild(container); 
+                    document.body.removeChild(container);
                     const today = new Date();
                     const dateStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
                     const fileName = `Itinerario-${dateStr}.pdf`;
@@ -348,23 +333,34 @@
                 autoPaging: 'text',
                 x: 15,
                 y: 15,
-                width: 170, 
+                width: 170,
                 windowWidth: 650
             });
         }
 
         window.addEventListener('load', () => {
-             handleSendMessage(true);
+            const initialMessages = [
+                "¡Bienvenidos a Montaner Viajes!",
+                "Soy María, su compañera de viajes. ¡Qué alegría que empecemos a planificar juntos! Para que la charla sea más personal, ¿cómo se llaman?"
+            ];
+            
+            chatHistory.push(
+                { role: "model", parts: [{ text: initialMessages[0] }] },
+                { role: "model", parts: [{ text: initialMessages[1] }] }
+            );
+            
+            typeAiMessage(initialMessages[0]).then(() => {
+                typeAiMessage(initialMessages[1]);
+            });
         });
 
-        sendBtn.addEventListener('click', () => handleSendMessage(false));
+        sendBtn.addEventListener('click', handleSendMessage);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                handleSendMessage(false);
+                handleSendMessage();
             }
         });
         generateBtn.addEventListener('click', generateFinalDocument);
-
     </script>
 </body>
 </html>
