@@ -193,7 +193,7 @@
             chatHistory.push({ role: "user", parts: [{ text: message }] });
 
             try {
-                const apiKey = "AIzaSyBLAbgpKfmrAe5CmZKKNaoQa-wMqCmI6yI;
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const payload = {
@@ -274,7 +274,7 @@
                     Historial del chat: ${JSON.stringify(chatHistory)}
                 `;
 
-                const apiKey = "";
+                const apiKey = "AIzaSyBLAbgpKfmrAe5CmZKKNaoQa-wMqCmI6yI";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: 'user', parts: [{ text: summarizerPrompt }] }] };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
