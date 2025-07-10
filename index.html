@@ -106,16 +106,13 @@
         const generateBtn = document.getElementById('generate-btn');
         const loader = document.getElementById('loader');
 
-        // **URL DE FORMSPREE (DEBES REEMPLAZARLA)**
         const formspreeUrl = 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE';
 
         let chatHistory = [];
         let finalItineraryText = "";
 
-        // --- PROMPT DEL SISTEMA ---
         const systemPrompt = `
             Tu rol: Eres María, una asesora de viajes experta de la agencia "Montaner Viajes". Tu estilo es profesional, cercano y amigable. Tu misión es guiar al usuario en una charla relajada para co-crear un viaje.
-
             **REGLAS DE ORO (INQUEBRANTABLES):**
             - **Auto-corrección:** Antes de responder, revisa el historial del chat. NUNCA repitas una pregunta que ya hiciste. NUNCA te presentes de nuevo.
             - **Oraciones Cortas:** Comunica una idea por mensaje.
@@ -123,15 +120,12 @@
             - **Espera Respuestas:** Si terminas con una pregunta, detente y espera la respuesta del usuario.
             - **Sin Jerga:** No uses 'che' ni un lenguaje demasiado informal.
             - **Separador:** Usa "[---]" para enviar varios mensajes cortos en un solo turno.
-
             **FLUJO DE CONVERSACIÓN OBLIGATORIO POR FASES:**
             No puedes pasar a la siguiente fase hasta no haber completado la actual.
-
             **FASE 1: PRESENTACIÓN**
             1.  **Si el chat está vacío:** Tu primer mensaje DEBE SER: "¡Hola! Soy María, de Montaner Viajes. ¡Qué alegría que empecemos a planificar un viaje juntos! Contame, ¿qué tenés en mente?".
             2.  **Si ya te presentaste y no sabes el nombre:** DEBES preguntar por el nombre. Ejemplo: "¡Suena genial! Para que charlemos mejor, ¿cómo te llamas?".
             3.  **PROHIBIDO AVANZAR:** NO pases a la Fase 2 hasta que sepas el nombre del usuario.
-
             **FASE 2: PERFIL DEL VIAJERO**
             Una vez que sabes el nombre, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
             - [ ] Estilo de Viaje: ¿Típico o alternativo?
@@ -141,13 +135,11 @@
             - [ ] Duración y Época.
             - [ ] Documentación (SOLO si es internacional): Pasaporte y Visa (si aplica).
             - [ ] Contacto: Email y celular.
-
             **FASE 3: PLANIFICACIÓN DEL ITINERARIO**
             Solo cuando tengas un perfil claro, empieza a planificar:
             - **Sugerencias Interactivas:** Nombra opciones (A, B, C) y pregunta de cuál quieren saber más.
             - **Manejo de Presupuesto:** Deriva los precios a tu compañera.
             - **Manejo de Paquetes Armados:** Si insisten, deriva el contacto.
-
             **FASE 4: CIERRE**
             Cuando el plan esté completo, tu ÚNICO mensaje en este turno debe ser: "Perfecto, [nombre del usuario]. Con toda esta información ya podemos armar el borrador final.[---]Para que mi compañera reciba el plan y pueda preparar el presupuesto, por favor, presiona el botón azul que dice 'Generar Borrador'.";
         `;
@@ -196,29 +188,31 @@
             const message = userInput.value.trim();
             if (!message && !isInitial) return;
 
-            if (!isInitial) {
+            let currentUserMessage;
+            if (isInitial) {
+                // Mensaje inicial para empezar la conversación
+                currentUserMessage = { role: "user", parts: [{ text: "Hola, quiero empezar a planificar un viaje." }] };
+            } else {
                 addUserMessage(message);
                 userInput.value = '';
-                chatHistory.push({ role: "user", parts: [{ text: message }] });
+                currentUserMessage = { role: "user", parts: [{ text: message }] };
             }
+            
+            // Añadir el mensaje del usuario al historial ANTES de la llamada a la API
+            chatHistory.push(currentUserMessage);
             
             loader.classList.remove('hidden');
             sendBtn.disabled = true;
             userInput.disabled = true;
 
             try {
-                const apiKey = ""; // Dejar vacío, el entorno lo gestiona.
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
-                // **FIX:** Ensure the `contents` array sent to the API is never empty.
-                // For the initial call, send a dummy message to kickstart the conversation.
-                // The system prompt will override this and generate the welcome message.
-                const apiContents = chatHistory.length > 0 ? chatHistory : [{ role: "user", parts: [{ text: "Hola" }] }];
-
+                // **FIX:** Se eliminó el campo `role` de `systemInstruction` para que coincida con el formato de la API.
                 const payload = {
-                    contents: apiContents,
+                    contents: chatHistory, // El historial ahora siempre está correctamente ordenado
                     systemInstruction: {
-                        role: "model",
                         parts: [{ text: systemPrompt }]
                     }
                 };
@@ -230,13 +224,11 @@
                 });
 
                 if (!response.ok) {
-                    // **FIX:** Improved error handling to prevent JSON parsing errors on non-JSON responses.
                     let errorDetail = await response.text();
                     try {
-                        // Attempt to parse as JSON for a more structured error message.
                         errorDetail = JSON.parse(errorDetail);
                     } catch (e) {
-                        // If it fails, it's not JSON; we'll log the raw text.
+                        // La respuesta de error no era JSON
                     }
                     console.error("Detalle del error de la API:", errorDetail);
                     throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
@@ -251,7 +243,7 @@
                 
                 loader.classList.add('hidden');
                 
-                // Add the AI's response to the main chat history.
+                // Añadir la respuesta del modelo al historial
                 chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
 
                 const messageParts = aiResponse.split('[---]');
@@ -299,7 +291,7 @@
                     Historial del chat: ${JSON.stringify(chatHistory)}
                 `;
 
-                const apiKey = ""; // Dejar vacío
+                const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: 'user', parts: [{ text: summarizerPrompt }] }] };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -369,7 +361,6 @@
              handleSendMessage(true);
         });
 
-        // Event Listeners
         sendBtn.addEventListener('click', () => handleSendMessage(false));
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
