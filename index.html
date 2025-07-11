@@ -6,9 +6,10 @@
     <title>Asesor de Viajes a PDF</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librerías para generar PDFs: jsPDF y html2canvas -->
+    <!-- Librerías para generar PDFs: jsPDF, html2canvas y autotable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <!-- Marked.js para convertir Markdown a HTML -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -49,6 +50,7 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* Cursor parpadeante para el efecto de tipeo */
         .typing-cursor::after {
             content: '▋';
             animation: blink 1s step-end infinite;
@@ -82,9 +84,9 @@
         <!-- Spinner de Carga -->
         <div id="loader" class="hidden p-6 flex justify-start">
              <div class="flex items-center space-x-2">
-                 <div class="loader"></div>
-                 <p class="text-gray-500 text-sm">Pensando...</p>
-             </div>
+                <div class="loader"></div>
+                <p class="text-gray-500 text-sm">Pensando...</p>
+            </div>
         </div>
 
         <!-- Área de Entrada de Texto -->
@@ -105,23 +107,38 @@
         const generateBtn = document.getElementById('generate-btn');
         const loader = document.getElementById('loader');
 
-        const formspreeUrl = 'https://formspree.io/f/xqabrpnz';
+        const formspreeUrl = 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE';
 
         let chatHistory = [];
+        let finalItineraryText = "";
 
         const systemPrompt = `
             Tu rol: Eres María, una asesora de viajes experta de la agencia "Montaner Viajes". Tu estilo es profesional, cercano y amigable. Tu misión es guiar al usuario en una charla relajada para co-crear un viaje.
+
             **REGLAS DE ORO (INQUEBRANTABLES):**
-            - **Auto-corrección:** Antes de responder, revisa el historial del chat. NUNCA repitas una pregunta que ya hiciste.
+            - **Auto-corrección:** Antes de responder, revisa el historial del chat. NUNCA repitas una pregunta que ya hiciste. NUNCA te presentes de nuevo.
             - **Oraciones Cortas:** Comunica una idea por mensaje.
             - **Interactúa:** Después de cada idea, pregunta "¿Qué te parece?" o similar.
             - **Espera Respuestas:** Si terminas con una pregunta, detente y espera la respuesta del usuario.
             - **Sin Jerga:** No uses 'che' ni un lenguaje demasiado informal.
             - **Separador:** Usa "[---]" para enviar varios mensajes cortos en un solo turno.
+            - **Regla de Conteo de Días (El Guardián del Calendario):** Tu función no es solo sugerir, sino también validar la logística del tiempo.
+
+              **Paso 1: Establecer el Total.** Una vez que el usuario y tú hayan acordado una **duración total** para el viaje (por ejemplo: "15 días", "3 semanas"), debes recordar este número como el **'Total Acordado'**.
+
+              **Paso 2: Llevar la Cuenta.** A medida que empiezan a distribuir días entre diferentes ciudades o destinos (ej: '5 días en Roma', '4 días en Florencia'), debes ir **sumando mentalmente** estos días parciales. A esta suma la llamarás el **'Total Distribuido'**.
+
+              **Paso 3: Validar constantemente.** Después de cada nueva propuesta de días para un destino, debes **comparar** inmediatamente el 'Total Distribuido' con el 'Total Acordado'.
+
+              **Paso 4: Notificar la Diferencia.** Si el 'Total Distribuido' **supera** al 'Total Acordado', tu próxima respuesta **DEBE OBLIGATORIAMENTE** ser para notificar al usuario de la diferencia de forma amable. No puedes continuar con la planificación de actividades ni pasar a otro tema hasta resolver esta discrepancia. Debes darle al usuario el control para decidir.
+
+              **Paso 5: Usar un Guion Específico.** Para notificar, usa un formato claro y amigable como este: '¡Ojo al plan, [Nombre del usuario]! Un pequeño detalle logístico: acordamos un viaje de **20 días** en total, ¿verdad? Con la distribución que estamos armando (8 en Madrid + 8 en Barcelona + 5 en Sevilla), ya vamos por **21 días**. ¡Nos pasamos por un día! ¿Qué preferís que hagamos? ¿Extendemos el viaje a 21 días o ajustamos la estadía en alguna de las ciudades?
+
             **FLUJO DE CONVERSACIÓN OBLIGATORIO POR FASES:**
             No puedes pasar a la siguiente fase hasta no haber completado la actual.
+
             **FASE 1: PERFIL DEL VIAJERO (Tu objetivo es completar esta checklist)**
-            El usuario ya ha recibido tu saludo. Tu primer objetivo es conocer su nombre. Luego, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
+            El usuario ya ha recibido tu saludo y te está respondiendo por primera vez. Tu primer objetivo es conocer su nombre. Luego, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
             - [ ] Nombre(s) del/los viajero(s).
             - [ ] Estilo de Viaje: ¿Típico o alternativo?
             - [ ] Grupo de Viaje: ¿Solo, pareja, amigos, familia?
@@ -129,12 +146,14 @@
             - [ ] Ritmo del Viaje: ¿Activo o tranquilo?
             - [ ] Duración y Época.
             - [ ] Documentación (SOLO si es internacional): Pasaporte y Visa (si aplica).
-            - [ ] Contacto: Email y celular.
+            - [ ] Contacto: Email y numero de celular.
+
             **FASE 2: PLANIFICACIÓN DEL ITINERARIO**
             Solo cuando tengas un perfil claro del viajero, empieza a planificar:
             - **Sugerencias Interactivas:** Nombra opciones (A, B, C) y pregunta de cuál quieren saber más.
             - **Manejo de Presupuesto:** Deriva los precios a tu compañera.
             - **Manejo de Paquetes Armados:** Si insisten, deriva el contacto.
+
             **FASE 3: CIERRE**
             Cuando el plan esté completo, tu ÚNICO mensaje en este turno debe ser: "Perfecto, [nombre del usuario]. Con toda esta información ya podemos armar el borrador final.[---]Para que mi compañera reciba el plan y pueda preparar el presupuesto, por favor, presiona el botón azul que dice 'Generar Borrador'.";
         `;
@@ -150,15 +169,26 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        function typeAiMessage(text) {
+        function typeAiMessage(text, isInstant = false) {
             return new Promise((resolve) => {
                 const messageWrapper = document.createElement('div');
                 messageWrapper.classList.add('flex', 'justify-start');
                 const messageBubble = document.createElement('div');
-                messageBubble.classList.add('p-3', 'rounded-lg', 'max-w-lg', 'ai-message', 'typing-cursor');
+                messageBubble.classList.add('p-3', 'rounded-lg', 'max-w-lg', 'ai-message');
+                
+                if (!isInstant) {
+                    messageBubble.classList.add('typing-cursor');
+                }
+
                 messageWrapper.appendChild(messageBubble);
                 chatContainer.appendChild(messageWrapper);
                 chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                if (isInstant) {
+                    messageBubble.innerHTML = marked.parse(text);
+                    resolve();
+                    return;
+                }
 
                 let i = 0;
                 const typingSpeed = 55;
@@ -172,7 +202,7 @@
                     } else {
                         messageBubble.innerHTML = marked.parse(messageBubble.textContent);
                         messageBubble.classList.remove('typing-cursor');
-                        resolve();
+                        resolve(); 
                     }
                 }
                 typing();
@@ -193,7 +223,7 @@
             chatHistory.push({ role: "user", parts: [{ text: message }] });
 
             try {
-                const apiKey = "AIzaSyBLAbgpKfmrAe5CmZKKNaoQa-wMqCmI6yI";
+                const apiKey = ""; // Dejar vacío
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const payload = {
@@ -203,22 +233,9 @@
                     }
                 };
 
-                const response = await fetch(apiUrl, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
-                });
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
-                if (!response.ok) {
-                    let errorDetail = await response.text();
-                    try {
-                        errorDetail = JSON.parse(errorDetail);
-                    } catch (e) {
-                        // Error response was not JSON
-                    }
-                    console.error("Detalle del error de la API:", errorDetail);
-                    throw new Error(`Error de la API: ${response.status} ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`Error de la API: ${response.statusText}`);
 
                 const result = await response.json();
                 let aiResponse = "Lo siento, no pude procesar tu solicitud.";
@@ -242,7 +259,7 @@
                             break; 
                         }
                         if (messageParts.length > 1) {
-                            await new Promise(resolve => setTimeout(resolve, 400));
+                            await new Promise(resolve => setTimeout(resolve, 400)); 
                         }
                     }
                 }
@@ -274,7 +291,7 @@
                     Historial del chat: ${JSON.stringify(chatHistory)}
                 `;
 
-                const apiKey = "AIzaSyBLAbgpKfmrAe5CmZKKNaoQa-wMqCmI6yI";
+                const apiKey = ""; // Dejar vacío
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ role: 'user', parts: [{ text: summarizerPrompt }] }] };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -287,6 +304,7 @@
                     summaryText = result.candidates[0].content.parts[0].text;
                 }
                 
+                // Enviar a Formspree
                 if (formspreeUrl && formspreeUrl !== 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE') {
                     await fetch(formspreeUrl, {
                         method: 'POST',
@@ -298,6 +316,7 @@
                     });
                 }
 
+                // Generar PDF para el usuario
                 exportToPDF(summaryText);
 
                 await typeAiMessage("¡Listo! La información ya fue enviada. Mi compañera se pondrá en contacto contigo pronto. ¡Gracias por confiar en nosotros!");
@@ -317,13 +336,12 @@
             
             const container = document.createElement('div');
             container.innerHTML = marked.parse(text);
-            container.style.width = '180mm';
-            container.style.visibility = 'hidden';
+            container.style.width = '180mm'; 
             document.body.appendChild(container);
 
             doc.html(container, {
                 callback: function (doc) {
-                    document.body.removeChild(container);
+                    document.body.removeChild(container); 
                     const today = new Date();
                     const dateStr = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
                     const fileName = `Itinerario-${dateStr}.pdf`;
@@ -331,33 +349,33 @@
                 },
                 margin: [15, 15, 15, 15],
                 autoPaging: 'text',
-                x: 15,
-                y: 15,
-                width: 170,
-                windowWidth: 650
+                x: 0,
+                y: 0,
+                width: 180,
+                windowWidth: 675
             });
         }
 
-        // **FIX:** Correctly initialize the chat history to be valid for the API.
+        // **LÓGICA DE INICIO CORREGIDA Y SIMPLIFICADA**
         window.addEventListener('load', () => {
             const initialMessages = [
                 "¡Bienvenidos a Montaner Viajes!",
                 "Soy María, su compañera de viajes. ¡Qué alegría que empecemos a planificar juntos! Para que la charla sea más personal, ¿cómo se llaman?"
             ];
             
-            // The API requires the history to start with a 'user' role.
-            // We create a valid history that reflects the initial state of the conversation.
+            // Añadir mensajes iniciales al historial para que la IA tenga contexto desde el principio.
             chatHistory.push(
-                { role: "user", parts: [{ text: "START_SESSION" }] }, // A placeholder to make the sequence valid
-                { role: "model", parts: [{ text: initialMessages.join('\n\n') }] } // The model's greeting
+                { role: "model", parts: [{ text: initialMessages[0] }] },
+                { role: "model", parts: [{ text: initialMessages[1] }] }
             );
             
-            // Display the initial messages in the UI for the user
+            // Mostrar mensajes iniciales en la UI
             typeAiMessage(initialMessages[0]).then(() => {
                 typeAiMessage(initialMessages[1]);
             });
         });
 
+        // Event Listeners
         sendBtn.addEventListener('click', handleSendMessage);
         userInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -365,6 +383,7 @@
             }
         });
         generateBtn.addEventListener('click', generateFinalDocument);
+
     </script>
 </body>
 </html>
