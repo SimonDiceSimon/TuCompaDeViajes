@@ -107,7 +107,7 @@
         const generateBtn = document.getElementById('generate-btn');
         const loader = document.getElementById('loader');
 
-        const formspreeUrl = 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE';
+        const formspreeUrl = 'https://formspree.io/f/xqabrpnz';
 
         let chatHistory = [];
         let finalItineraryText = "";
@@ -305,7 +305,7 @@
                 }
                 
                 // Enviar a Formspree
-                if (formspreeUrl && formspreeUrl !== 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE') {
+                if (formspreeUrl && formspreeUrl !== 'https://formspree.io/f/xqabrpnz') {
                     await fetch(formspreeUrl, {
                         method: 'POST',
                         body: JSON.stringify({ 
