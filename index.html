@@ -105,7 +105,7 @@
         const generateBtn = document.getElementById('generate-btn');
         const loader = document.getElementById('loader');
 
-        const formspreeUrl = 'PEGA_AQUÍ_TU_URL_DE_FORMSPREE';
+        const formspreeUrl = 'https://formspree.io/f/xqabrpnz';
 
         let chatHistory = [];
 
@@ -193,7 +193,7 @@
             chatHistory.push({ role: "user", parts: [{ text: message }] });
 
             try {
-                const apiKey = "";
+                const apiKey = "AIzaSyBLAbgpKfmrAe5CmZKKNaoQa-wMqCmI6yI";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 
                 const payload = {
