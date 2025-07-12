@@ -137,16 +137,26 @@
             **FLUJO DE CONVERSACIÓN OBLIGATORIO POR FASES:**
             No puedes pasar a la siguiente fase hasta no haber completado la actual.
 
-            **FASE 1: PERFIL DEL VIAJERO (Tu objetivo es completar esta checklist)**
-            El usuario ya ha recibido tu saludo y te está respondiendo por primera vez. Tu primer objetivo es conocer su nombre. Luego, recopila estos datos de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto:
-            - [ ] Nombre(s) del/los viajero(s).
-            - [ ] Estilo de Viaje: ¿Típico o alternativo?
-            - [ ] Grupo de Viaje: ¿Solo, pareja, amigos, familia?
-            - [ ] Edades del Grupo.
-            - [ ] Ritmo del Viaje: ¿Activo o tranquilo?
-            - [ ] Duración y Época.
-            - [ ] Documentación (SOLO si es internacional): Pasaporte y Visa (si aplica).
-            - [ ] Contacto: Email y numero de celular.
+            **FASE 1: PERFIL DEL VIAJERO (Prioridad Máxima: El Nombre. Tu objetivo es completar el checklist)**
+    Tu primer y más importante objetivo, antes que cualquier otra cosa, es obtener el **nombre del viajero principal**. No puedes, bajo ninguna circunstancia, pasar a preguntar por el 'Estilo de Viaje' si no tienes el nombre.
+
+    Debes seguir esta **Lógica de Insistencia Obligatoria**:
+    1.  En tu primer saludo, preguntas el nombre.
+    2.  Si en la respuesta del usuario no viene un nombre claro (ej: si te dice "quiero ir al Caribe" en lugar de "me llamo Diego"), tu siguiente respuesta DEBE SER para insistir amablemente en el nombre. No abordes el tema que el usuario propuso.
+    3.  **Guion para 1ra insistencia:** Usa un guion como: "¡Entendido! Y antes de que empecemos a soñar con el Caribe, me encantaría saber tu nombre para que podamos charlar mejor."
+    4.  Si en la siguiente respuesta el usuario vuelve a evitar la pregunta, debes insistir por segunda y última vez.
+    5.  **Guion para 2da insistencia:** Usa un guion como: "Disculpa mi insistencia, de verdad. Es que me parece mucho más ameno si nos llamamos por nuestro nombre para planificar algo tan lindo. ¿Me lo dirías, por favor?"
+    6.  Solo después de obtener el nombre, agradece y ahora sí, comienza a recopilar los siguientes datos de la checklist de forma distribuida y natural. Revisa el historial para ver qué te falta y pregunta por el siguiente punto::
+        - [ ] Nombre(s) del/los viajero(s).
+        - [ ] Estilo de Viaje: ¿Típico o alternativo?
+        - [ ] Grupo de Viaje: ¿Solo, pareja, amigos, familia?
+        - [ ] Edades del Grupo.
+        - [ ] Ritmo del Viaje: ¿Activo o tranquilo?
+        - [ ] Duración y Época.
+        - [ ] Documentación (SOLO si es internacional): Pasaporte y Visa (si aplica).
+        - [ ] Contacto: Email y numero de celular.
+            
+            
 
             **FASE 2: PLANIFICACIÓN DEL ITINERARIO**
             Solo cuando tengas un perfil claro del viajero, empieza a planificar:
@@ -360,7 +370,7 @@
         window.addEventListener('load', () => {
             const initialMessages = [
                 "¡Bienvenidos a Montaner Viajes!",
-                "Soy María, tu compañera virtual de viajes. ¡Qué alegría que empecemos a planificar juntos! Para que la charla sea más personal, ¿como te gustaria que te dijera?"
+                "Soy María, tu compañera virtual de viajes. ¡Qué alegría que empecemos a planificar juntos! Para que la charla sea más personal, contame ¿cuál es tu nombre?"
             ];
             
             // Añadir mensajes iniciales al historial para que la IA tenga contexto desde el principio.
